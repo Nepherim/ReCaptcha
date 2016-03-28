@@ -3,7 +3,7 @@ if (!defined('PmWiki'))
 	exit();
 /*  Copyright 2016 David Gilbert.
 This file is recaptcha.php; you can redistribute it and/or modify it under the terms of the GNU General Public
-License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
+License as published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version.
 
 For installation and usage instructions refer to: http://pmwiki.com/wiki/Cookbook/ReCaptcha
 
