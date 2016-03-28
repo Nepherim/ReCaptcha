@@ -6,11 +6,8 @@ This file is recaptcha.php; you can redistribute it and/or modify it under the t
 License as published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version.
 
 For installation and usage instructions refer to: http://pmwiki.com/wiki/Cookbook/ReCaptcha
-
-Also ref: https://github.com/google/recaptcha/tree/1.0.0
-
 */
-$RecipeInfo['ReCaptcha']['Version'] = '20160328'; //0.0.1
+$RecipeInfo['ReCaptcha']['Version'] = '20160328'; //0.0.2
 if ($VersionNum < 2001950)
 	Abort("<h3>You are running PmWiki version {$Version}. In order to use ReCaptcha please update to 2.2.1 or later.</h3>");
 
@@ -18,27 +15,27 @@ if ($VersionNum < 2001950)
 // - User settings
 SDVA($rc_Settings, array(
 	'enabled' => 1,
-	'secret' => '',  //secret key
-	'language' => 'en',  //https://developers.google.com/recaptcha/docs/language
+	'sitekey' => '',  // public key
+	'secret' => '',  // secret key
+	'language' => 'en',  // https://developers.google.com/recaptcha/docs/language
 	'script' => 'https://www.google.com/recaptcha/api.js'
 	)
 );
 SDVA($rc_Settings['options'], array(
-	"sitekey" => '',  //public key
-	"theme" => "light",
-	"type" => "image",
-	"size" => "normal",
-	"tabindex" => "0",
-	"callback" => "",
-	"expired-callback" => ""
-	)
-);
-XLSDV('en', array('missing-input'=>'Please verify you are not a robot.'));
+	'theme' => 'light',
+	'type' => 'image',
+	'size' => 'normal',
+	'tabindex' => '0',
+	'callback' => '',
+	'expired-callback' => '',
+	'sitekey' => $rc_Settings['sitekey']
+));
+XLSDV('en', array('missing-input-response'=>'Please verify you are not a robot.'));
 SDVA($HTMLFooterFmt, array('recaptcha.js' => '<script src="'. $rc_Settings['script']. '?hl='. $rc_Settings['language']. '"></script>'));
 Markup('recaptcha', 'directives', '/\(:recaptcha\s*(.*):\)/i', "re_ReCaptcha_MU");
 array_unshift($EditFunctions, 'rc_RequireReCaptcha');
-SDV($Conditions['recaptcha'], '(boolean)rc_IsReCaptcha()->success');
-require_once("$FarmD/cookbook/recaptcha/recaptchalib.php");
+SDV($Conditions['recaptcha'], '(boolean)rc_IsReCaptcha()->isSuccess()');
+require_once("$FarmD/cookbook/recaptcha/autoload.php");
 
 //generate the recaptcha div with data arguments. called with (:recaptcha arg1=val1:)
 function re_ReCaptcha_MU($args){
@@ -57,15 +54,16 @@ function rc_RequireReCaptcha($pagename, $page, $new) {
 	global $rc_Settings,$MessagesFmt,$EnablePost;
 	if (!IsEnabled($rc_Settings['enabled'], 0)) return;
 	$rc = rc_IsReCaptcha();
-	if ($rc->success)  return;
-	$MessagesFmt[] = "<div class='wikimessage'>$[". $rc->errorCodes. "]</div>";
+	if ($rc->isSuccess())  return;
+	foreach ($rc->getErrorCodes() as $code)
+		$MessagesFmt[] = "<div class='wikimessage'>$[". $code. "]</div>";
 	$EnablePost = 0;
 }
 
 //"success": true|false, "errorCodes": "missing-input"
 function rc_IsReCaptcha() {
 	global $rc_Settings;
-	$re_ReCaptcha = new ReCaptcha($rc_Settings['secret']);
-	return $re_ReCaptcha->verifyResponse($_SERVER["REMOTE_ADDR"], @$_POST["g-recaptcha-response"]);
+	$recaptcha = new \ReCaptcha\ReCaptcha($rc_Settings['secret']);
+	return $recaptcha->verify(@$_POST["g-recaptcha-response"], $_SERVER["REMOTE_ADDR"]);
 }
 
