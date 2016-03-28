@@ -18,6 +18,7 @@ SDVA($rc_Settings, array(
 	'sitekey' => '',  // public key
 	'secret' => '',  // secret key
 	'language' => 'en',  // https://developers.google.com/recaptcha/docs/language
+	'curl' => 0,  // set to 1 if you receive "invalid-json" errors
 	'script' => 'https://www.google.com/recaptcha/api.js'
 	)
 );
@@ -32,13 +33,14 @@ SDVA($rc_Settings['options'], array(
 ));
 XLSDV('en', array('missing-input-response'=>'Please verify you are not a robot.'));
 SDVA($HTMLFooterFmt, array('recaptcha.js' => '<script src="'. $rc_Settings['script']. '?hl='. $rc_Settings['language']. '"></script>'));
-Markup('recaptcha', 'directives', '/\(:recaptcha\s*(.*):\)/i', "re_ReCaptcha_MU");
+Markup('recaptcha', 'directives', '/\(:recaptcha\s*(.*?):\)/i', "re_ReCaptcha_MU");  //make sure args pattern is lazy with ? otherwise picks up other markup on same line
 array_unshift($EditFunctions, 'rc_RequireReCaptcha');
 SDV($Conditions['recaptcha'], '(boolean)rc_IsReCaptcha()->isSuccess()');
 require_once("$FarmD/cookbook/recaptcha/autoload.php");
 
 //generate the recaptcha div with data arguments. called with (:recaptcha arg1=val1:)
 function re_ReCaptcha_MU($args){
+	function rc_ParseArgs(&$i, $k){ if($i>"") $i=" data-$k=\"$i\""; }
 	global $rc_Settings;
 	if(is_array($args)){
 		$opt = ParseArgs($args[1]);
@@ -46,7 +48,7 @@ function re_ReCaptcha_MU($args){
 		$rc_Settings['options'] = array_merge($rc_Settings['options'], $opt);
 	}
 	$p = $rc_Settings['options'];
-	array_walk($p, create_function('&$i,$k','if($i>"") $i=" data-$k=\"$i\"";'));
+	array_walk($p, 'rc_ParseArgs');
 	return '<div class="g-recaptcha"'.implode($p,"").'></div>';
 }
 
@@ -63,7 +65,11 @@ function rc_RequireReCaptcha($pagename, $page, $new) {
 //"success": true|false, "errorCodes": "missing-input"
 function rc_IsReCaptcha() {
 	global $rc_Settings;
-	$recaptcha = new \ReCaptcha\ReCaptcha($rc_Settings['secret']);
+	//curl request prevents "invalid-json" on some servers.
+	if ($rc_Settings['curl'])
+		$recaptcha = new \ReCaptcha\ReCaptcha($rc_Settings['secret'], new \ReCaptcha\RequestMethod\CurlPost());
+	else
+		$recaptcha = new \ReCaptcha\ReCaptcha($rc_Settings['secret']);
 	return $recaptcha->verify(@$_POST["g-recaptcha-response"], $_SERVER["REMOTE_ADDR"]);
 }
 
