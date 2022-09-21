@@ -49,7 +49,7 @@ function re_ReCaptcha_MU($args){
 	}
 	$p = $rc_Settings['options'];
 	array_walk($p, 'rc_ParseArgs');
-	return '<div class="g-recaptcha"'.implode($p,"").'></div>';
+	return '<div class="g-recaptcha"'.implode("",$p).'></div>';
 }
 
 function rc_RequireReCaptcha($pagename, $page, $new) {
